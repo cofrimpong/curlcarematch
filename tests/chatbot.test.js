@@ -22,6 +22,24 @@ describe('chat assistant helpers', () => {
       value: 'high'
     });
 
+    expect(parseProfileCommand('i have 4b hair')).toEqual({
+      type: 'set-field',
+      field: 'hairType',
+      value: '4B'
+    });
+
+    expect(parseProfileCommand('i have 4b hair, low porosity, medium density, main goal is moisture, i have a dry scalp, and my budget is no more than $25')).toEqual({
+      type: 'batch-set-fields',
+      updates: {
+        hairType: '4B',
+        porosity: 'low',
+        density: 'medium',
+        goal: 'moisture',
+        scalpConcern: 'dryness',
+        budget: 'up to $25'
+      }
+    });
+
     expect(parseProfileCommand('add parabens')).toEqual({
       type: 'toggle-ingredient',
       value: 'parabens',
@@ -126,6 +144,46 @@ describe('chat assistant helpers', () => {
 
     expect(reply).toContain('Low: Cuticles are tighter');
     expect(reply).not.toContain('The profile builder is not active on this page.');
+  });
+
+  it('applies multiple profile fields at once and points to the next missing trait', () => {
+    const inputs = {
+      hairType: { value: '', dispatchEvent() {} },
+      porosity: { value: '', dispatchEvent() {} },
+      density: { value: '', dispatchEvent() {} },
+      goal: { value: '', dispatchEvent() {} },
+      scalpConcern: { value: '', dispatchEvent() {} },
+      budget: { value: '', dispatchEvent() {} }
+    };
+
+    const form = {
+      elements: {
+        namedItem(name) {
+          return inputs[name] || null;
+        }
+      },
+      querySelectorAll() {
+        return [];
+      }
+    };
+
+    const reply = handleProfileAction(
+      {
+        type: 'batch-set-fields',
+        updates: {
+          hairType: '4B',
+          porosity: 'low',
+          density: 'medium'
+        }
+      },
+      { knowledge: {}, form }
+    );
+
+    expect(inputs.hairType.value).toBe('4B');
+    expect(inputs.porosity.value).toBe('low');
+    expect(inputs.density.value).toBe('medium');
+    expect(reply).toContain('Updated your profile: Hair type: 4B | Porosity: Low | Density: Medium.');
+    expect(reply).toContain('Next up: Main goal.');
   });
 
   it('normalizes stored conversation history', () => {

@@ -23,6 +23,15 @@ const PROFILE_FIELD_LABELS = {
   budget: 'Budget'
 };
 
+const PROFILE_FIELD_PROMPTS = {
+  hairType: 'Tell me your hair type, like 4B, 3C, or unknown.',
+  porosity: 'Tell me your porosity: low, medium, high, or unsure.',
+  density: 'Tell me your density: low, medium, high, or unsure.',
+  goal: 'Tell me your main goal, like moisture, curl definition, or frizz control.',
+  scalpConcern: 'Tell me about your scalp, like dryness, itchiness, flakes, sensitivity, psoriasis-prone scalp, or none.',
+  budget: 'Tell me your budget cap, like up to $25 or no more than $40.'
+};
+
 const PROFILE_GOAL_OPTIONS = {
   moisture: 'moisture',
   'curl definition': 'curl definition',
@@ -74,6 +83,27 @@ const PRODUCT_GOAL_OPTIONS = {
   protective: 'protective styling',
   'damage repair': 'damage repair',
   repair: 'damage repair'
+};
+
+const PROFILE_LEVEL_OPTIONS = {
+  low: 'low',
+  medium: 'medium',
+  high: 'high',
+  unsure: 'unsure'
+};
+
+const PROFILE_SCALP_OPTIONS = {
+  none: 'none',
+  dryness: 'dryness',
+  dry: 'dryness',
+  itchiness: 'itchiness',
+  itchy: 'itchiness',
+  flakes: 'flakes',
+  flaky: 'flakes',
+  flaking: 'flakes',
+  psoriasis: 'psoriasis-prone scalp',
+  sensitivity: 'sensitivity',
+  sensitive: 'sensitivity'
 };
 
 const HAIR_TYPE_GROUPS = {
@@ -271,7 +301,7 @@ function getAssistantStateStorage() {
 }
 
 function createDefaultAssistantUiState() {
-  return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '', pendingPromptMode: 'manual' };
+  return { open: false, expanded: false, fullscreen: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '', pendingPromptMode: 'manual' };
 }
 
 function readAssistantUiState() {
@@ -287,6 +317,7 @@ function readAssistantUiState() {
     return {
       open: Boolean(parsed.open),
       expanded: Boolean(parsed.expanded),
+      fullscreen: Boolean(parsed.fullscreen),
       history: normalizeConversationHistory(parsed.history),
       context: normalizeAssistantContext(parsed.context),
       pendingPrompt: typeof parsed.pendingPrompt === 'string' ? parsed.pendingPrompt : '',
@@ -330,7 +361,7 @@ export function getMissingProfileFields(profile) {
 }
 
 function parseBudgetValue(text) {
-  const budgetMatch = text.match(/(?:\$|up to\s*\$?|under\s*\$?)(10|15|25|40|60|100)\b/);
+  const budgetMatch = text.match(/(?:\$|up to\s*\$?|under\s*\$?|no more than\s*\$?|maximum\s*\$?|max\s*\$?)(10|15|25|40|60|100)\b/);
 
   if (!budgetMatch) {
     return null;
@@ -353,6 +384,10 @@ function findOptionValues(text, optionMap) {
   )];
 }
 
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function findHairTypeValue(text) {
   if (text.includes("don't know") || text.includes('dont know') || text.includes('unknown')) {
     return 'unknown';
@@ -360,6 +395,98 @@ function findHairTypeValue(text) {
 
   const explicit = text.match(/\b([1-4][abc])\b/);
   return explicit ? explicit[1].toUpperCase() : null;
+}
+
+function findLabeledProfileOptionValue(text, label, optionMap) {
+  const labelPattern = escapeRegExp(label);
+
+  return Object.entries(optionMap)
+    .sort((left, right) => right[0].length - left[0].length)
+    .find(([alias]) => {
+      const aliasPattern = escapeRegExp(alias);
+      return new RegExp(`\\b${aliasPattern}\\s+${labelPattern}\\b`).test(text)
+        || new RegExp(`\\b${labelPattern}\\b\\s+(?:is|to|=|looks|feels|seems)\\s+${aliasPattern}\\b`).test(text);
+    })?.[1] || null;
+}
+
+function findGoalProfileValue(text) {
+  return Object.entries(PROFILE_GOAL_OPTIONS)
+    .sort((left, right) => right[0].length - left[0].length)
+    .find(([alias]) => {
+      const aliasPattern = escapeRegExp(alias);
+      return new RegExp(`\\b(?:main\\s+)?goal\\b(?:[^a-z0-9]+(?:is|to|=))?[^a-z0-9]*${aliasPattern}\\b`).test(text)
+        || new RegExp(`\\b${aliasPattern}\\b(?:[^a-z0-9]+(?:goal|focus))\\b`).test(text)
+        || new RegExp(`\\b(?:want|need|focus(?:ed)?\\s+on|looking\\s+for|trying\\s+to\\s+improve)\\b[^.]{0,40}\\b${aliasPattern}\\b`).test(text);
+    })?.[1] || null;
+}
+
+function findScalpConcernValue(text) {
+  if (/\bdry\s+scalp\b/.test(text)) {
+    return 'dryness';
+  }
+
+  if (/\bitchy\s+scalp\b/.test(text)) {
+    return 'itchiness';
+  }
+
+  if (/\b(?:flaky|flakes|flaking)\s+scalp\b/.test(text)) {
+    return 'flakes';
+  }
+
+  if (/\bsensitive\s+scalp\b/.test(text)) {
+    return 'sensitivity';
+  }
+
+  if (/\bpsoriasis(?:-prone)?\s+scalp\b/.test(text)) {
+    return 'psoriasis-prone scalp';
+  }
+
+  if (text.includes('scalp') || text.includes('concern')) {
+    return findOptionValue(text, PROFILE_SCALP_OPTIONS);
+  }
+
+  return null;
+}
+
+function extractProfileFieldUpdates(text) {
+  const updates = {};
+  const budget = parseBudgetValue(text);
+  const hairType = findHairTypeValue(text);
+  const porosity = findLabeledProfileOptionValue(text, 'porosity', PROFILE_LEVEL_OPTIONS);
+  const density = findLabeledProfileOptionValue(text, 'density', PROFILE_LEVEL_OPTIONS);
+  const scalpConcern = findScalpConcernValue(text);
+
+  if (budget && /(budget|\$|under|up to|no more than|max|maximum)/.test(text)) {
+    updates.budget = budget;
+  }
+
+  if (hairType && (text.includes('hair type') || text.includes('curl type') || /\b[1-4][abc]\s+(?:hair|curls?)\b/.test(text) || /\bmy\s+hair\s+is\s+[1-4][abc]\b/.test(text))) {
+    updates.hairType = hairType;
+  }
+
+  if (porosity) {
+    updates.porosity = porosity;
+  }
+
+  if (density) {
+    updates.density = density;
+  }
+
+  if (scalpConcern) {
+    updates.scalpConcern = scalpConcern;
+  }
+
+  const goal = findGoalProfileValue(text) || (Object.keys(updates).length >= 2 ? findOptionValue(text, PROFILE_GOAL_OPTIONS) : null);
+
+  if (goal) {
+    updates.goal = goal;
+  }
+
+  if (!updates.hairType && hairType && Object.keys(updates).length >= 2) {
+    updates.hairType = hairType;
+  }
+
+  return updates;
 }
 
 function findIngredientValue(text) {
@@ -581,6 +708,17 @@ function buildAssistantContextUpdate(command, page, resolvedMessage) {
     };
   }
 
+  if (command?.type === 'batch-set-fields') {
+    const updatedFields = REQUIRED_PROFILE_FIELDS.filter((field) => command.updates?.[field]);
+    const lastField = updatedFields.at(-1) || '';
+
+    return {
+      lastIntent: 'set-field',
+      lastProfileField: lastField,
+      lastTopic: lastField === 'scalpConcern' ? 'scalp concern' : lastField === 'hairType' ? 'hair type' : lastField
+    };
+  }
+
   if (command?.type === 'toggle-ingredient') {
     return { lastIntent: 'toggle-ingredient', lastTopic: command.value };
   }
@@ -667,6 +805,18 @@ export function parseProfileCommand(message) {
     }
   }
 
+  const fieldUpdates = extractProfileFieldUpdates(text);
+  const updateEntries = Object.entries(fieldUpdates);
+
+  if (updateEntries.length > 1) {
+    return { type: 'batch-set-fields', updates: fieldUpdates };
+  }
+
+  if (updateEntries.length === 1) {
+    const [field, value] = updateEntries[0];
+    return { type: 'set-field', field, value };
+  }
+
   const ingredient = findIngredientValue(text);
 
   if (ingredient && /(avoid|remove|add|use|include|uncheck|check|without|skip|paraben|sulfate|silicone|fragrance|alcohol|butter)/.test(text)) {
@@ -675,50 +825,6 @@ export function parseProfileCommand(message) {
       value: ingredient,
       checked: !shouldRemoveIngredient(text)
     };
-  }
-
-  const budget = parseBudgetValue(text);
-
-  if (budget && (text.includes('budget') || text.includes('$') || text.includes('under') || text.includes('up to'))) {
-    return { type: 'set-field', field: 'budget', value: budget };
-  }
-
-  const hairType = findHairTypeValue(text);
-
-  if (hairType && (text.includes('hair type') || text.includes('type ') || text === normalizeText(hairType))) {
-    return { type: 'set-field', field: 'hairType', value: hairType };
-  }
-
-  const porosity = findOptionValue(text, { low: 'low', medium: 'medium', high: 'high', unsure: 'unsure' });
-  if (porosity && text.includes('porosity')) {
-    return { type: 'set-field', field: 'porosity', value: porosity };
-  }
-
-  const density = findOptionValue(text, { low: 'low', medium: 'medium', high: 'high', unsure: 'unsure' });
-  if (density && text.includes('density')) {
-    return { type: 'set-field', field: 'density', value: density };
-  }
-
-  const goal = findOptionValue(text, PROFILE_GOAL_OPTIONS);
-  if (goal && (text.includes('goal') || text.includes('want') || text.includes('need'))) {
-    return { type: 'set-field', field: 'goal', value: goal };
-  }
-
-  const scalpConcern = findOptionValue(text, {
-    none: 'none',
-    dryness: 'dryness',
-    dry: 'dryness',
-    itchiness: 'itchiness',
-    itchy: 'itchiness',
-    flakes: 'flakes',
-    flaking: 'flakes',
-    psoriasis: 'psoriasis-prone scalp',
-    sensitivity: 'sensitivity',
-    sensitive: 'sensitivity'
-  });
-
-  if (scalpConcern && (text.includes('scalp') || text.includes('concern'))) {
-    return { type: 'set-field', field: 'scalpConcern', value: scalpConcern };
   }
 
   return null;
@@ -958,7 +1064,7 @@ function getQuickActionCards(page) {
 
 function getWelcomeMessage(page) {
   if (page === 'quiz') {
-    return 'I can help fill this profile for you. Ask me to set a field, explain a term, or tell you what is still missing.';
+    return 'I can help fill this profile for you. You can tell me one field at a time or list several traits in one message, and I will keep moving to the next missing detail.';
   }
 
   if (page === 'products') {
@@ -1176,6 +1282,18 @@ function createAssistantMarkup(page, assistantPage) {
             </svg>
             <span class="visually-hidden assistant-expand-label">Expand conversation</span>
           </button>
+          <button class="assistant-fullscreen-toggle" type="button" aria-pressed="false" aria-label="Open conversation in fullscreen" title="Open conversation in fullscreen">
+            <svg viewBox="0 0 20 20" role="presentation" focusable="false" aria-hidden="true">
+              <path d="M7 3H3v4" />
+              <path d="M13 3h4v4" />
+              <path d="M17 13v4h-4" />
+              <path d="M3 13v4h4" />
+              <path d="M3 7l5-5" />
+              <path d="M17 7l-5-5" />
+              <path d="M17 13l-5 5" />
+              <path d="M3 13l5 5" />
+            </svg>
+          </button>
         </div>
         <div class="assistant-panel-header">
           <div class="assistant-panel-title-block">
@@ -1185,26 +1303,12 @@ function createAssistantMarkup(page, assistantPage) {
           </div>
         </div>
         <div class="assistant-messages-shell">
-          <div class="assistant-messages-toolbar">
-            <button class="assistant-fullscreen-toggle" type="button" aria-pressed="false" aria-label="Open conversation in fullscreen" title="Open conversation in fullscreen">
-              <svg viewBox="0 0 20 20" role="presentation" focusable="false" aria-hidden="true">
-                <path d="M7 3H3v4" />
-                <path d="M13 3h4v4" />
-                <path d="M17 13v4h-4" />
-                <path d="M3 13v4h4" />
-                <path d="M3 7l5-5" />
-                <path d="M17 7l-5-5" />
-                <path d="M17 13l-5 5" />
-                <path d="M3 13l5 5" />
-              </svg>
-            </button>
-          </div>
           <div class="assistant-messages" aria-live="polite"></div>
         </div>
         <div class="assistant-quick-actions"></div>
         <form class="assistant-form">
           <label class="visually-hidden" for="assistant-input">Message the assistant</label>
-          <textarea id="assistant-input" class="assistant-input" rows="2" placeholder="Ask for help, like 'set porosity to high' or 'show leave-ins under $25'."></textarea>
+          <textarea id="assistant-input" class="assistant-input" rows="2" placeholder="Here to help you navigate CurlCare Match and give hair tips!"></textarea>
           <div class="assistant-form-actions">
             <button class="btn btn-brand assistant-submit" type="submit">Send</button>
           </div>
@@ -1258,12 +1362,46 @@ function triggerFormEvents(element) {
   element.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+function formatProfileFieldValue(field, value) {
+  if (field === 'hairType') {
+    return value === 'unknown' ? 'Unknown' : value;
+  }
+
+  return toTitleCase(value);
+}
+
+function buildProfileFieldReply(field, value) {
+  return `${PROFILE_FIELD_LABELS[field] || field}: ${formatProfileFieldValue(field, value)}`;
+}
+
+function buildNextProfileStepReply(profile) {
+  const nextField = REQUIRED_PROFILE_FIELDS.find((field) => !profile[field]);
+
+  if (!nextField) {
+    return 'Everything is filled in. You can submit now to see your matches.';
+  }
+
+  return `Next up: ${PROFILE_FIELD_LABELS[nextField]}. ${PROFILE_FIELD_PROMPTS[nextField]}`;
+}
+
+function setProfileFieldValue(form, field, value) {
+  const input = form.elements.namedItem(field);
+
+  if (!input) {
+    return false;
+  }
+
+  input.value = value;
+  triggerFormEvents(input);
+  return true;
+}
+
 export function handleProfileAction(command, elements) {
   if (command.type === 'explain-topic') {
     return buildTopicResponse(command.topic, elements.knowledge);
   }
 
-  const form = document.getElementById('quiz-form');
+  const form = elements.form || (typeof document !== 'undefined' ? document.getElementById('quiz-form') : null);
 
   if (!form) {
     return 'The profile builder is not active on this page.';
@@ -1275,7 +1413,7 @@ export function handleProfileAction(command, elements) {
     return missing.length
       ? joinReplyParts([
         `You still have ${missing.length} slot${missing.length === 1 ? '' : 's'} left: ${missing.join(', ')}.`,
-        'You can ask me to fill one directly, like “set porosity to high” or “set budget to $40”.'
+        buildNextProfileStepReply(profile)
       ])
       : joinReplyParts([
         'Everything is filled in.',
@@ -1299,18 +1437,51 @@ export function handleProfileAction(command, elements) {
   }
 
   if (command.type === 'set-field') {
-    const input = form.elements.namedItem(command.field);
-
-    if (!input) {
+    if (!setProfileFieldValue(form, command.field, command.value)) {
       return `I could not find the ${PROFILE_FIELD_LABELS[command.field] || command.field} field on this page.`;
     }
 
-    input.value = command.value;
-    triggerFormEvents(input);
+    const profile = readProfileFromForm(form);
     return joinReplyParts([
-      `${PROFILE_FIELD_LABELS[command.field] || command.field} set to ${toTitleCase(command.value)}.`,
-      `You can ask “what's left?” any time and I will check the remaining slots.`
+      `${PROFILE_FIELD_LABELS[command.field] || command.field} set to ${formatProfileFieldValue(command.field, command.value)}.`,
+      buildNextProfileStepReply(profile)
     ]);
+  }
+
+  if (command.type === 'batch-set-fields') {
+    const applied = [];
+    const missingInputs = [];
+
+    REQUIRED_PROFILE_FIELDS.forEach((field) => {
+      const value = command.updates?.[field];
+
+      if (!value) {
+        return;
+      }
+
+      if (!setProfileFieldValue(form, field, value)) {
+        missingInputs.push(PROFILE_FIELD_LABELS[field] || field);
+        return;
+      }
+
+      applied.push(buildProfileFieldReply(field, value));
+    });
+
+    if (!applied.length) {
+      return 'I could not match those profile details to the builder fields yet.';
+    }
+
+    const profile = readProfileFromForm(form);
+    const replyParts = [
+      `Updated your profile: ${applied.join(' | ')}.`,
+      buildNextProfileStepReply(profile)
+    ];
+
+    if (missingInputs.length) {
+      replyParts.push(`I could not find these fields on the page: ${missingInputs.join(', ')}.`);
+    }
+
+    return joinReplyParts(replyParts);
   }
 
   if (command.type === 'toggle-ingredient') {
@@ -1441,7 +1612,7 @@ export function handleGenericRequest(message, page, knowledge) {
   if (page === 'quiz') {
     return joinReplyParts([
       'I can fill fields for you here and explain what each one means.',
-      'Try “set hair type to 4C”, “set budget to $40”, “add parabens”, or “what\'s left?”.',
+      'Try “I have 4B hair, low porosity, medium density, dry scalp, and a budget of no more than $25”, “set hair type to 4C”, or “add parabens”.',
       productSuggestion
     ]);
   }
@@ -1561,24 +1732,27 @@ export function initChatAssistant() {
     assistantContext = normalizeAssistantContext(uiState.context);
 
     if (page === 'chat') {
-      uiState = { ...uiState, open: true, expanded: true, pendingPrompt: '' };
+      uiState = { ...uiState, open: true, expanded: true, fullscreen: true, pendingPrompt: '' };
     } else {
-      uiState = { ...uiState, open: false, expanded: false, pendingPrompt: '' };
+      uiState = { ...uiState, open: false, expanded: false, fullscreen: false, pendingPrompt: '' };
     }
 
     writeAssistantUiState(uiState);
     panel.classList.toggle('d-none', !uiState.open);
     shell.classList.toggle('assistant-shell-expanded', uiState.expanded);
     panel.classList.toggle('assistant-panel-expanded', uiState.expanded);
+    shell.classList.toggle('assistant-shell-fullscreen', uiState.fullscreen);
+    panel.classList.toggle('assistant-panel-fullscreen', uiState.fullscreen);
+    document.body.classList.toggle('assistant-fullscreen-open', uiState.fullscreen);
     launcher.classList.toggle('d-none', uiState.open);
     launcher.setAttribute('aria-expanded', String(uiState.open));
     expandButton.setAttribute('aria-pressed', String(uiState.expanded));
     expandButton.setAttribute('aria-label', uiState.expanded ? 'Shrink conversation' : 'Expand conversation');
     expandButton.setAttribute('title', uiState.expanded ? 'Shrink conversation' : 'Expand conversation');
     expandButton.querySelector('.assistant-expand-label').textContent = uiState.expanded ? 'Shrink conversation' : 'Expand conversation';
-    fullscreenToggle.setAttribute('aria-pressed', String(uiState.expanded));
-    fullscreenToggle.setAttribute('aria-label', uiState.expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
-    fullscreenToggle.setAttribute('title', uiState.expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
+    fullscreenToggle.setAttribute('aria-pressed', String(uiState.fullscreen));
+    fullscreenToggle.setAttribute('aria-label', uiState.fullscreen ? 'Exit fullscreen conversation' : 'Open conversation in fullscreen');
+    fullscreenToggle.setAttribute('title', uiState.fullscreen ? 'Exit fullscreen conversation' : 'Open conversation in fullscreen');
     renderConversationHistory();
     input.value = '';
   };
@@ -1628,20 +1802,45 @@ export function initChatAssistant() {
     expandButton.setAttribute('aria-label', expanded ? 'Shrink conversation' : 'Expand conversation');
     expandButton.setAttribute('title', expanded ? 'Shrink conversation' : 'Expand conversation');
     expandButton.querySelector('.assistant-expand-label').textContent = expanded ? 'Shrink conversation' : 'Expand conversation';
-    fullscreenToggle.setAttribute('aria-pressed', String(expanded));
-    fullscreenToggle.setAttribute('aria-label', expanded ? 'Return to compact conversation' : 'Open larger conversation view');
-    fullscreenToggle.setAttribute('title', expanded ? 'Return to compact conversation' : 'Open larger conversation view');
     uiState = { ...uiState, expanded };
+    writeAssistantUiState(uiState);
+  };
+
+  const setFullscreenState = (fullscreen) => {
+    shell.classList.toggle('assistant-shell-fullscreen', fullscreen);
+    panel.classList.toggle('assistant-panel-fullscreen', fullscreen);
+    document.body.classList.toggle('assistant-fullscreen-open', fullscreen);
+    fullscreenToggle.setAttribute('aria-pressed', String(fullscreen));
+    fullscreenToggle.setAttribute('aria-label', fullscreen ? 'Exit fullscreen conversation' : 'Open conversation in fullscreen');
+    fullscreenToggle.setAttribute('title', fullscreen ? 'Exit fullscreen conversation' : 'Open conversation in fullscreen');
+    uiState = { ...uiState, fullscreen };
     writeAssistantUiState(uiState);
   };
 
   launcher.addEventListener('click', () => setPanelState(panel.classList.contains('d-none')));
   minimizeButton.addEventListener('click', () => {
+    setFullscreenState(false);
     setExpandedState(false);
     setPanelState(false);
   });
-  expandButton.addEventListener('click', () => setExpandedState(!panel.classList.contains('assistant-panel-expanded')));
-  fullscreenToggle.addEventListener('click', () => setExpandedState(!panel.classList.contains('assistant-panel-expanded')));
+  expandButton.addEventListener('click', () => {
+    if (panel.classList.contains('assistant-panel-fullscreen')) {
+      setFullscreenState(false);
+    }
+
+    setExpandedState(!panel.classList.contains('assistant-panel-expanded'));
+  });
+  fullscreenToggle.addEventListener('click', () => {
+    const nextFullscreen = !panel.classList.contains('assistant-panel-fullscreen');
+
+    setPanelState(true);
+
+    if (nextFullscreen) {
+      setExpandedState(true);
+    }
+
+    setFullscreenState(nextFullscreen);
+  });
 
   document.addEventListener(AUTH_STATE_EVENT_NAME, () => {
     syncAssistantStateForCurrentUser();
@@ -1655,6 +1854,7 @@ export function initChatAssistant() {
   });
 
   setExpandedState(page === 'chat');
+  setFullscreenState(page === 'chat');
   if (page === 'chat') {
     launcher.classList.add('d-none');
     minimizeButton.classList.add('d-none');
