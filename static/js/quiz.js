@@ -1,4 +1,6 @@
-const STORAGE_KEY = 'curlcareProfile';
+import { clearStoredProfile, readStoredProfile, writeStoredProfile } from './profile-storage.js';
+
+const AUTH_STATE_EVENT_NAME = 'curlcare:auth-state-change';
 const REQUIRED_FIELDS = ['hairType', 'porosity', 'density', 'goal', 'scalpConcern', 'budget'];
 
 export function normalizeProfile(rawProfile) {
@@ -7,7 +9,7 @@ export function normalizeProfile(rawProfile) {
     porosity: rawProfile.porosity || '',
     density: rawProfile.density || '',
     goal: rawProfile.goal || '',
-    scalpConcern: rawProfile.scalpConcern || 'none',
+    scalpConcern: rawProfile.scalpConcern || '',
     budget: rawProfile.budget || '',
     avoidIngredients: Array.isArray(rawProfile.avoidIngredients) ? rawProfile.avoidIngredients : []
   };
@@ -50,23 +52,25 @@ function updateProgress(form) {
 }
 
 function fillFormFromStorage(form) {
-  const existingValue = sessionStorage.getItem(STORAGE_KEY);
+  const profile = readStoredProfile();
 
-  if (!existingValue) {
+  form.reset();
+
+  if (!profile) {
     updateProgress(form);
     return;
   }
 
-  const profile = normalizeProfile(JSON.parse(existingValue));
+  const normalizedProfile = normalizeProfile(profile);
   REQUIRED_FIELDS.forEach((field) => {
     const input = form.elements.namedItem(field);
 
     if (input) {
-      input.value = profile[field];
+      input.value = normalizedProfile[field];
     }
   });
 
-  profile.avoidIngredients.forEach((value) => {
+  normalizedProfile.avoidIngredients.forEach((value) => {
     const checkbox = form.querySelector(`input[name="avoidIngredients"][value="${value}"]`);
 
     if (checkbox) {
@@ -113,15 +117,20 @@ function initQuizPage() {
       return;
     }
 
-    sessionStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
+    writeStoredProfile(profile);
     window.location.href = 'results.html';
   });
 
   resetButton.addEventListener('click', () => {
-    sessionStorage.removeItem(STORAGE_KEY);
+    clearStoredProfile();
     form.reset();
     clearFeedback();
     updateProgress(form);
+  });
+
+  document.addEventListener(AUTH_STATE_EVENT_NAME, () => {
+    clearFeedback();
+    fillFormFromStorage(form);
   });
 }
 

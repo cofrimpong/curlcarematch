@@ -3,6 +3,7 @@ const ASSISTANT_UI_STORAGE_KEY = 'curlcareAssistantUi';
 const AUTH_SESSION_STORAGE_KEY = 'curlcareAuthSession';
 const AUTH_STATE_EVENT_NAME = 'curlcare:auth-state-change';
 const MAX_ASSISTANT_HISTORY = 24;
+import { readStoredProfile } from './profile-storage.js';
 const ASSISTANT_TYPING_DELAY_MS = {
   manualMin: 260,
   manualMax: 520,
@@ -277,12 +278,7 @@ function writeAssistantUiState(state) {
 }
 
 function readProfileFromStorage() {
-  try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
+  return readStoredProfile();
 }
 
 function readProfileFromForm(form) {

@@ -24,7 +24,7 @@
       <section class="page-hero mb-4">
         <span class="eyebrow-pill">Hair Profile Builder</span>
         <h1 class="mt-3">Build your personalized product profile.</h1>
-        <p class="mb-0">This profile builder stores your answers in session storage so the results page can rank products against your preferences.</p>
+        <p class="mb-0">This profile builder stores your answers for the current visitor, so each signed-in user keeps their own profile and new users start blank.</p>
       </section>
 
       <div class="progress-shell mb-4" aria-live="polite">
@@ -103,6 +103,7 @@
               <div class="profile-field profile-field-wide">
                 <label class="form-label" for="scalpConcern">Scalp concern</label>
                 <select class="form-select" id="scalpConcern" name="scalpConcern" required>
+                  <option value="">Select</option>
                   <option value="none">None</option>
                   <option value="dryness">Dryness</option>
                   <option value="itchiness">Itchiness</option>

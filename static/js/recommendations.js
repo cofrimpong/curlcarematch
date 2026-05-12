@@ -1,5 +1,6 @@
 import { safeJsonFetch } from './app.js';
 import { getBudgetLabelForPrice, hasListedPrice, isPriceWithinBudget } from './budget.js';
+import { readStoredProfile } from './profile-storage.js';
 
 export const SCORE_WEIGHTS = {
   hairType: 20,
@@ -283,16 +284,15 @@ async function initResultsPage() {
   }
 
   const emptyState = document.getElementById('results-empty');
-  const rawProfile = sessionStorage.getItem('curlcareProfile');
+  const profile = readStoredProfile();
 
-  if (!rawProfile) {
+  if (!profile) {
     emptyState.classList.remove('d-none');
     emptyState.innerHTML = '<h2 class="h3">No hair profile found</h2><p class="mb-0">Start with your profile so the recommendation engine has enough context to rank products.</p><a class="btn btn-brand mt-3" href="quiz.html">Build profile</a>';
     return;
   }
 
   try {
-    const profile = JSON.parse(rawProfile);
     const products = await safeJsonFetch('data/products.json');
     const recommendations = selectRecommendations(products, profile);
     renderProfileSummary(profile);
