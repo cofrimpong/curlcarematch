@@ -1,6 +1,9 @@
 const AUTH_USERS_STORAGE_KEY = 'curlcareAuthUsers';
 const AUTH_SESSION_STORAGE_KEY = 'curlcareAuthSession';
-const FIREBASE_CONFIG_MODULE_PATH = './firebase-auth-config.local.js';
+const FIREBASE_CONFIG_MODULE_PATHS = [
+  './firebase-auth-config.local.js',
+  './firebase-auth-config.js'
+];
 
 let firebaseAuthClientPromise;
 
@@ -147,12 +150,19 @@ export function loginLocalUser(users, payload) {
 }
 
 async function loadFirebaseConfig() {
-  try {
-    const module = await import(FIREBASE_CONFIG_MODULE_PATH);
-    return isFirebaseConfigReady(module.firebaseAuthConfig) ? module.firebaseAuthConfig : null;
-  } catch {
-    return null;
+  for (const modulePath of FIREBASE_CONFIG_MODULE_PATHS) {
+    try {
+      const module = await import(modulePath);
+
+      if (isFirebaseConfigReady(module.firebaseAuthConfig)) {
+        return module.firebaseAuthConfig;
+      }
+    } catch {
+      continue;
+    }
   }
+
+  return null;
 }
 
 async function getFirebaseAuthClient() {
@@ -196,7 +206,7 @@ async function signInWithGoogle() {
   const client = await getFirebaseAuthClient();
 
   if (!client) {
-    throw new Error('Google sign-in is not configured yet. Add your Firebase web config to static/js/firebase-auth-config.local.js.');
+    throw new Error('Google sign-in is not configured yet. Add your Firebase web config to static/js/firebase-auth-config.js or static/js/firebase-auth-config.local.js.');
   }
 
   const result = await client.signInWithPopup(client.auth, client.provider);
@@ -336,7 +346,8 @@ export function initAuthUi() {
     const googleButton = mount.querySelector('[data-auth-google]');
     const authForm = mount.querySelector('[data-auth-form]');
 
-    avatarButton?.addEventListener('click', () => {
+    avatarButton?.addEventListener('click', (event) => {
+      event.stopPropagation();
       state.dropdownOpen = !state.dropdownOpen;
       state.modalOpen = false;
       state.error = '';

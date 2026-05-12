@@ -33,12 +33,11 @@ CurlCare Match is an inclusive hair product recommendation web app for users acr
 
 1. Create a Firebase project and add a Web app.
 2. In Firebase Authentication, enable the Google provider.
-3. Copy [static/js/firebase-auth-config.example.js](static/js/firebase-auth-config.example.js) to a new local file named static/js/firebase-auth-config.local.js.
-4. Replace the placeholder values in that local file with your Firebase web config.
-5. In the Firebase console, add http://127.0.0.1:4173 and your deployment origin to Authorized domains.
-6. Restart the local server and use the header avatar menu to test Google sign-in.
+3. Put your Firebase web config into [static/js/firebase-auth-config.js](static/js/firebase-auth-config.js) for deployment, or keep a machine-local override in static/js/firebase-auth-config.local.js during development.
+4. In the Firebase console, add localhost, 127.0.0.1, and your deployment origin to Authorized domains.
+5. Restart the local server and use the header avatar menu to test Google sign-in.
 
-The local config file is gitignored so your project-specific values stay out of source control.
+Firebase web config values are public client-side identifiers, so [static/js/firebase-auth-config.js](static/js/firebase-auth-config.js) can be committed for deployment. The local override file stays gitignored if you want a separate machine-only config.
 
 ## Run Tests
 
