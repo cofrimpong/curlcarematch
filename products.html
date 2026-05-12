@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Product Library | CurlCare Match</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Manrope:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
+      crossorigin="anonymous"
+    />
+    <link rel="stylesheet" href="static/css/style.css" />
+  </head>
+  <body data-page="products">
+    <div data-site-header></div>
+    <main class="container py-5">
+      <section class="page-hero mb-4">
+        <span class="eyebrow-pill">Product Library</span>
+        <h1 class="mt-3">Browse the current product dataset.</h1>
+        <p class="mb-0">Filter by product type, goal, and budget to shape the products shown on the right.</p>
+      </section>
+
+      <section class="products-layout" aria-label="Product library with filters">
+        <aside class="filter-shell product-filter-sidebar" aria-label="Product filters">
+          <div class="sidebar-filter-header">
+            <div>
+              <h2 class="sidebar-filter-title">Filter (<span id="activeFilterCount">0</span>)</h2>
+              <div id="activeFilterChips" class="active-filter-chips" aria-live="polite"></div>
+            </div>
+            <button id="clearFilters" class="btn btn-link sidebar-clear-btn" type="button">Clear All</button>
+          </div>
+
+          <fieldset class="filter-group">
+            <legend>Product type</legend>
+            <div class="filter-option-list">
+              <label class="filter-option-item filter-option-item-type" data-product-type="shampoo" for="type-shampoo">
+                <input id="type-shampoo" type="checkbox" name="productType" value="shampoo" />
+                <span>Shampoo</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="conditioner" for="type-conditioner">
+                <input id="type-conditioner" type="checkbox" name="productType" value="conditioner" />
+                <span>Conditioner</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="leave-in" for="type-leave-in">
+                <input id="type-leave-in" type="checkbox" name="productType" value="leave-in" />
+                <span>Leave-in</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="deep-conditioner" for="type-deep-conditioner">
+                <input id="type-deep-conditioner" type="checkbox" name="productType" value="deep conditioner" />
+                <span>Deep conditioner</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="oil" for="type-oil">
+                <input id="type-oil" type="checkbox" name="productType" value="oil" />
+                <span>Oil</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="gel-mousse" for="type-gel-mousse">
+                <input id="type-gel-mousse" type="checkbox" name="productType" value="gel/mousse" />
+                <span>Gel/mousse</span>
+              </label>
+              <label class="filter-option-item filter-option-item-type" data-product-type="scalp-treatment" for="type-scalp-treatment">
+                <input id="type-scalp-treatment" type="checkbox" name="productType" value="scalp treatment" />
+                <span>Scalp treatment</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="filter-group">
+            <legend>Goal</legend>
+            <div class="filter-option-list">
+              <label class="filter-option-item" for="goal-moisture">
+                <input id="goal-moisture" type="checkbox" name="goal" value="moisture" />
+                <span>Moisture</span>
+              </label>
+              <label class="filter-option-item" for="goal-curl-definition">
+                <input id="goal-curl-definition" type="checkbox" name="goal" value="curl definition" />
+                <span>Curl definition</span>
+              </label>
+              <label class="filter-option-item" for="goal-frizz-control">
+                <input id="goal-frizz-control" type="checkbox" name="goal" value="frizz control" />
+                <span>Frizz control</span>
+              </label>
+              <label class="filter-option-item" for="goal-growth-support">
+                <input id="goal-growth-support" type="checkbox" name="goal" value="growth support" />
+                <span>Growth support</span>
+              </label>
+              <label class="filter-option-item" for="goal-thickness-volume">
+                <input id="goal-thickness-volume" type="checkbox" name="goal" value="thickness/volume" />
+                <span>Thickness/volume</span>
+              </label>
+              <label class="filter-option-item" for="goal-scalp-hydration">
+                <input id="goal-scalp-hydration" type="checkbox" name="goal" value="scalp hydration" />
+                <span>Scalp hydration</span>
+              </label>
+              <label class="filter-option-item" for="goal-protective-styling">
+                <input id="goal-protective-styling" type="checkbox" name="goal" value="protective styling" />
+                <span>Protective styling</span>
+              </label>
+              <label class="filter-option-item" for="goal-damage-repair">
+                <input id="goal-damage-repair" type="checkbox" name="goal" value="damage repair" />
+                <span>Damage repair</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class="filter-group filter-group-budget">
+            <legend>Budget</legend>
+            <div class="budget-slider-shell">
+              <div class="budget-slider-header">
+                <span class="muted-small">Up to</span>
+                <span id="filterBudgetLabel" class="budget-slider-label">$100</span>
+              </div>
+              <input class="form-range budget-slider" id="filterBudget" name="budget" type="range" min="0" max="100" step="1" value="100" />
+            </div>
+          </fieldset>
+
+          <fieldset class="filter-group">
+            <legend>Sort by price</legend>
+            <label class="filter-select-shell" for="filterSort">
+              <select id="filterSort" name="sort" class="form-select filter-select-input">
+                <option value="default">Recommended order</option>
+                <option value="price-low-high">Price: Low to high</option>
+                <option value="price-high-low">Price: High to low</option>
+              </select>
+            </label>
+          </fieldset>
+        </aside>
+
+        <div class="products-content">
+          <div id="product-results-count" class="mb-2 text-muted"></div>
+          <p id="product-results-explainer" class="muted-small mb-4"></p>
+          <div id="products-grid" class="row g-4"></div>
+        </div>
+      </section>
+    </main>
+    <div data-site-footer></div>
+    <script type="module" src="static/js/app.js"></script>
+    <script type="module" src="static/js/products.js"></script>
+  </body>
+</html>

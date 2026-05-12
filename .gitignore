@@ -1,0 +1,4 @@
+node_modules/
+coverage/
+.env
+static/js/firebase-auth-config.local.js

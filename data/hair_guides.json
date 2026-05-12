@@ -1,0 +1,72 @@
+{
+  "hairTypes": [
+    {
+      "id": "1A-1C",
+      "title": "Type 1 Straight",
+      "description": "Straight textures range from very fine and silky to slightly coarse with visible body.",
+      "pattern": "Usually reflects light easily and can get weighed down by heavy products.",
+      "commonNeeds": ["light moisture", "volume support", "clarifying wash days"]
+    },
+    {
+      "id": "2A-2C",
+      "title": "Type 2 Wavy",
+      "description": "Wavy hair forms loose S patterns and often needs balance between definition and softness.",
+      "pattern": "Can lose shape with very rich formulas or become frizzy with not enough hydration.",
+      "commonNeeds": ["frizz control", "light hold", "hydration without buildup"]
+    },
+    {
+      "id": "3A-3C",
+      "title": "Type 3 Curly",
+      "description": "Curly hair forms springy loops that usually benefit from slip, moisture, and styling support.",
+      "pattern": "Definition improves when products layer well and drying routines reduce disruption.",
+      "commonNeeds": ["curl definition", "moisture", "soft hold"]
+    },
+    {
+      "id": "4A-4C",
+      "title": "Type 4 Coily",
+      "description": "Coily textures often have tight bends and can benefit from moisture retention and thoughtful layering.",
+      "pattern": "Shrinkage is common and richer conditioning routines often help with manageability.",
+      "commonNeeds": ["moisture retention", "protective styling", "damage prevention"]
+    }
+  ],
+  "porosity": [
+    {
+      "level": "Low porosity",
+      "description": "Hair has trouble letting moisture in, so lighter products and warmth can help products absorb more evenly.",
+      "guidance": "Choose lightweight layers and avoid stacking heavy butters too early.",
+      "productGuidance": ["light leave-ins", "steam or warm water", "buildable moisture"]
+    },
+    {
+      "level": "Medium porosity",
+      "description": "Hair usually absorbs and retains moisture in a balanced way.",
+      "guidance": "Most product families can work, so focus on goal and density fit.",
+      "productGuidance": ["balanced formulas", "flexible styling", "routine consistency"]
+    },
+    {
+      "level": "High porosity",
+      "description": "Hair often absorbs moisture quickly and loses it quickly, so richer support can help seal it in.",
+      "guidance": "Look for richer conditioners, creams, and sealing oils when they fit your density.",
+      "productGuidance": ["richer moisture", "sealing layers", "repair support"]
+    }
+  ],
+  "density": [
+    {
+      "level": "Low density",
+      "description": "Scalp is easier to see and heavy formulas can flatten the hair quickly.",
+      "guidance": "Favor airy textures and strategic styling support.",
+      "productGuidance": ["lightweight formulas", "volume support", "minimal buildup"]
+    },
+    {
+      "level": "Medium density",
+      "description": "Hair fullness feels balanced, so many product textures can work.",
+      "guidance": "Adjust mostly for porosity and styling goals.",
+      "productGuidance": ["balanced routines", "layer flexibility", "goal-based styling"]
+    },
+    {
+      "level": "High density",
+      "description": "Hair appears fuller and may need richer formulas or stronger hold to reach all sections evenly.",
+      "guidance": "Sectioning and richer products often improve consistency.",
+      "productGuidance": ["richer conditioners", "stronger hold", "sectioned application"]
+    }
+  ]
+}
