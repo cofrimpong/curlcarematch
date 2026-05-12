@@ -256,15 +256,24 @@ async function attachFirebaseSessionListener(state, render) {
   }
 
   state.googleStatus = 'ready';
+  const hadStoredFirebaseSession = state.user?.source === 'firebase';
+  let hasResolvedInitialFirebaseState = false;
   client.onAuthStateChanged(client.auth, (firebaseUser) => {
     if (firebaseUser?.email) {
       state.user = mapFirebaseUser(firebaseUser);
       writeSessionUser(state.user);
     } else if (state.user?.source === 'firebase') {
+      if (!hasResolvedInitialFirebaseState && hadStoredFirebaseSession) {
+        hasResolvedInitialFirebaseState = true;
+        render();
+        return;
+      }
+
       state.user = null;
       writeSessionUser(null);
     }
 
+    hasResolvedInitialFirebaseState = true;
     render();
   });
 }

@@ -1607,7 +1607,7 @@ export function handleGenericRequest(message, page, knowledge) {
     ]);
   }
 
-  if (text.includes('summarize my profile') || text.includes('my profile')) {
+  if (text.includes('summarize my profile') || text.includes('summarize the profile behind these matches') || text.includes('profile behind these matches') || text.includes('my profile')) {
     return joinReplyParts([
       formatProfileSummary(readProfileFromStorage() || {}),
       'If you want, I can also help adjust one of those fields.'
@@ -1754,8 +1754,6 @@ export function initChatAssistant() {
 
     if (page === 'chat') {
       uiState = { ...uiState, open: true, expanded: true, fullscreen: true, pendingPrompt: '' };
-    } else {
-      uiState = { ...uiState, open: false, expanded: false, fullscreen: false, pendingPrompt: '' };
     }
 
     writeAssistantUiState(uiState);
@@ -1874,14 +1872,16 @@ export function initChatAssistant() {
     }
   });
 
-  setExpandedState(page === 'chat');
-  setFullscreenState(page === 'chat');
   if (page === 'chat') {
+    setExpandedState(true);
+    setFullscreenState(true);
     launcher.classList.add('d-none');
     minimizeButton.classList.add('d-none');
     setPanelState(true);
   } else {
-    setPanelState(false);
+    setExpandedState(uiState.expanded);
+    setFullscreenState(uiState.fullscreen);
+    setPanelState(uiState.open);
   }
 
   form.addEventListener('submit', async (event) => {

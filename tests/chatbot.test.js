@@ -125,6 +125,14 @@ describe('chat assistant helpers', () => {
     expect(reply).toContain('Pick one of the cards below');
   });
 
+  it('summarizes the saved profile from the results-page prompt wording', () => {
+    const reply = handleGenericRequest('Summarize the profile behind these matches', 'results', {
+      products: []
+    });
+
+    expect(reply).toContain('If you want, I can also help adjust one of those fields.');
+  });
+
   it('gives product guidance instead of repeating density explanations', () => {
     const reply = buildProductGuidanceReply('show me some products if i have low density', 'hair-guide', { products: [] });
 
