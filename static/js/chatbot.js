@@ -271,7 +271,7 @@ function getAssistantStateStorage() {
 }
 
 function createDefaultAssistantUiState() {
-  return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '' };
+  return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '', pendingPromptMode: 'manual' };
 }
 
 function readAssistantUiState() {
@@ -289,7 +289,8 @@ function readAssistantUiState() {
       expanded: Boolean(parsed.expanded),
       history: normalizeConversationHistory(parsed.history),
       context: normalizeAssistantContext(parsed.context),
-      pendingPrompt: typeof parsed.pendingPrompt === 'string' ? parsed.pendingPrompt : ''
+      pendingPrompt: typeof parsed.pendingPrompt === 'string' ? parsed.pendingPrompt : '',
+      pendingPromptMode: parsed.pendingPromptMode === 'quick-action' ? 'quick-action' : 'manual'
     };
   } catch {
     return createDefaultAssistantUiState();
@@ -1511,6 +1512,7 @@ export function initChatAssistant() {
   let assistantContext = normalizeAssistantContext(uiState.context);
   let pendingInputMode = 'manual';
   const initialPendingPrompt = page === 'chat' ? uiState.pendingPrompt : '';
+  const initialPendingPromptMode = page === 'chat' ? uiState.pendingPromptMode : 'manual';
 
   const syncConversationHistory = () => {
     uiState = { ...uiState, history: conversationHistory, context: assistantContext };
@@ -1589,7 +1591,7 @@ export function initChatAssistant() {
 
   renderQuickActions(quickActions, getQuickActionCards(assistantPage), (prompt) => {
     if (page !== 'chat') {
-      uiState = { ...uiState, pendingPrompt: prompt };
+      uiState = { ...uiState, pendingPrompt: prompt, pendingPromptMode: 'quick-action' };
       writeAssistantUiState(uiState);
       window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
       return;
@@ -1668,7 +1670,7 @@ export function initChatAssistant() {
     }
 
     if (page !== 'chat') {
-      uiState = { ...uiState, pendingPrompt: message };
+      uiState = { ...uiState, pendingPrompt: message, pendingPromptMode: 'manual' };
       writeAssistantUiState(uiState);
       window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
       return;
@@ -1755,10 +1757,15 @@ export function initChatAssistant() {
   });
 
   if (page === 'chat' && initialPendingPrompt) {
-    uiState = { ...uiState, pendingPrompt: '' };
+    uiState = { ...uiState, pendingPrompt: '', pendingPromptMode: 'manual' };
     writeAssistantUiState(uiState);
-    pendingInputMode = 'quick-action';
     input.value = initialPendingPrompt;
-    form.requestSubmit();
+
+    if (initialPendingPromptMode === 'quick-action') {
+      pendingInputMode = 'quick-action';
+      form.requestSubmit();
+    } else {
+      input.focus();
+    }
   }
 }
