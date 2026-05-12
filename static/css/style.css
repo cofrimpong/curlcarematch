@@ -67,6 +67,9 @@ main,
   top: 0.9rem;
   right: 0.9rem;
   z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
 }
 
 .assistant-shell-page {

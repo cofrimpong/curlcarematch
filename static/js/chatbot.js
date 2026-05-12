@@ -1160,6 +1160,9 @@ function createAssistantMarkup(page, assistantPage) {
       </button>
       <section id="assistant-panel" class="assistant-panel d-none" aria-label="CurlCare chat assistant">
         <div class="assistant-panel-corner-control">
+          <button class="assistant-close" type="button" aria-label="Minimize conversation" title="Minimize conversation">
+            <span aria-hidden="true">-</span>
+          </button>
           <button class="assistant-expand" type="button" aria-pressed="false" aria-label="Expand conversation" title="Expand conversation">
             <svg viewBox="0 0 20 20" role="presentation" focusable="false" aria-hidden="true">
               <path d="M7 3H3v4" />
@@ -1498,6 +1501,7 @@ export function initChatAssistant() {
   const shell = document.querySelector('[data-chat-assistant]');
   const launcher = shell.querySelector('.assistant-launcher');
   const panel = shell.querySelector('.assistant-panel');
+  const minimizeButton = shell.querySelector('.assistant-close');
   const expandButton = shell.querySelector('.assistant-expand');
   const fullscreenToggle = shell.querySelector('.assistant-fullscreen-toggle');
   const messages = shell.querySelector('.assistant-messages');
@@ -1566,6 +1570,7 @@ export function initChatAssistant() {
     panel.classList.toggle('d-none', !uiState.open);
     shell.classList.toggle('assistant-shell-expanded', uiState.expanded);
     panel.classList.toggle('assistant-panel-expanded', uiState.expanded);
+    launcher.classList.toggle('d-none', uiState.open);
     launcher.setAttribute('aria-expanded', String(uiState.open));
     expandButton.setAttribute('aria-pressed', String(uiState.expanded));
     expandButton.setAttribute('aria-label', uiState.expanded ? 'Shrink conversation' : 'Expand conversation');
@@ -1591,9 +1596,11 @@ export function initChatAssistant() {
 
   renderQuickActions(quickActions, getQuickActionCards(assistantPage), (prompt) => {
     if (page !== 'chat') {
-      uiState = { ...uiState, pendingPrompt: prompt, pendingPromptMode: 'quick-action' };
-      writeAssistantUiState(uiState);
-      window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
+      setPanelState(true);
+      setExpandedState(true);
+      pendingInputMode = 'quick-action';
+      input.value = prompt;
+      form.requestSubmit();
       return;
     }
 
@@ -1604,6 +1611,7 @@ export function initChatAssistant() {
 
   const setPanelState = (open) => {
     panel.classList.toggle('d-none', !open);
+    launcher.classList.toggle('d-none', open);
     launcher.setAttribute('aria-expanded', String(open));
     uiState = { ...uiState, open };
     writeAssistantUiState(uiState);
@@ -1621,21 +1629,19 @@ export function initChatAssistant() {
     expandButton.setAttribute('title', expanded ? 'Shrink conversation' : 'Expand conversation');
     expandButton.querySelector('.assistant-expand-label').textContent = expanded ? 'Shrink conversation' : 'Expand conversation';
     fullscreenToggle.setAttribute('aria-pressed', String(expanded));
-    fullscreenToggle.setAttribute('aria-label', expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
-    fullscreenToggle.setAttribute('title', expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
+    fullscreenToggle.setAttribute('aria-label', expanded ? 'Return to compact conversation' : 'Open larger conversation view');
+    fullscreenToggle.setAttribute('title', expanded ? 'Return to compact conversation' : 'Open larger conversation view');
     uiState = { ...uiState, expanded };
     writeAssistantUiState(uiState);
   };
 
   launcher.addEventListener('click', () => setPanelState(panel.classList.contains('d-none')));
-  expandButton.addEventListener('click', () => setExpandedState(!panel.classList.contains('assistant-panel-expanded')));
-  fullscreenToggle.addEventListener('click', () => {
-    if (page === 'chat') {
-      return;
-    }
-
-    window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
+  minimizeButton.addEventListener('click', () => {
+    setExpandedState(false);
+    setPanelState(false);
   });
+  expandButton.addEventListener('click', () => setExpandedState(!panel.classList.contains('assistant-panel-expanded')));
+  fullscreenToggle.addEventListener('click', () => setExpandedState(!panel.classList.contains('assistant-panel-expanded')));
 
   document.addEventListener(AUTH_STATE_EVENT_NAME, () => {
     syncAssistantStateForCurrentUser();
@@ -1651,8 +1657,7 @@ export function initChatAssistant() {
   setExpandedState(page === 'chat');
   if (page === 'chat') {
     launcher.classList.add('d-none');
-    expandButton.classList.add('d-none');
-    fullscreenToggle.classList.add('d-none');
+    minimizeButton.classList.add('d-none');
     setPanelState(true);
   } else {
     setPanelState(false);
@@ -1670,10 +1675,8 @@ export function initChatAssistant() {
     }
 
     if (page !== 'chat') {
-      uiState = { ...uiState, pendingPrompt: message, pendingPromptMode: 'manual' };
-      writeAssistantUiState(uiState);
-      window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
-      return;
+      setPanelState(true);
+      setExpandedState(true);
     }
 
     const resolvedMessage = resolveContextualMessage(message, conversationHistory, assistantContext);
