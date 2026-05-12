@@ -11,6 +11,7 @@ CurlCare Match is an inclusive hair product recommendation web app for users acr
 - Combined guide page for hair types, porosity, and density.
 - Homepage includes the About section and hair type visual overview.
 - Grounding-ready _corpus folder for the future chatbot interface.
+- LangChain-backed chat route for grounded freeform assistant answers.
 - Automated tests with Vitest.
 
 ## Tech Stack
@@ -20,14 +21,35 @@ CurlCare Match is an inclusive hair product recommendation web app for users acr
 - JavaScript ES modules
 - Bootstrap 5
 - JSON data files
+- LangChain JS
+- OpenAI via LangChain
+- Express
 - Vitest
-- http-server
 
 ## Setup
 
 1. Install dependencies with npm install.
 2. Start the local server with npm run dev.
 3. Open http://127.0.0.1:4173.
+
+## LangChain Chat Setup
+
+1. Add OPENAI_API_KEY to your local .env file.
+2. Run npm run dev so the Express server can serve both the site and the /api/chat LangChain route.
+3. The existing frontend assistant will use the LangChain route for grounded freeform replies and fall back to local rule-based responses if the route is unavailable.
+
+For a live deployment that uses LangChain, deploy this repo to Vercel or another Node-capable host. GitHub Pages alone cannot run the server-side LangChain route.
+
+## Vercel Deployment
+
+1. Import the GitHub repo into Vercel.
+2. Keep the framework preset as Other.
+3. Do not set a build command.
+4. Set the output directory blank so Vercel serves the static site root and the serverless api route together.
+5. Add OPENAI_API_KEY in the Vercel project environment variables.
+6. Redeploy after the variable is saved.
+
+Vercel will serve the static pages from the repository root and the LangChain endpoint from [api/chat.js](api/chat.js).
 
 ## Firebase Google Sign-In Setup
 

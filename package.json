@@ -4,11 +4,20 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "http-server . -p 4173 -c-1",
+    "dev": "node server.js",
+    "dev:static": "http-server . -p 4173 -c-1",
+    "start": "node server.js",
     "test": "vitest run"
   },
   "devDependencies": {
     "http-server": "^14.1.1",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@langchain/openai": "^1.4.5",
+    "@langchain/textsplitters": "^1.0.1",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "langchain": "^1.4.0"
   }
 }

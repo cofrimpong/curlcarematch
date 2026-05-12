@@ -1,9 +1,11 @@
+import { readStoredProfile } from './profile-storage.js';
+
 const STORAGE_KEY = 'curlcareProfile';
 const ASSISTANT_UI_STORAGE_KEY = 'curlcareAssistantUi';
 const AUTH_SESSION_STORAGE_KEY = 'curlcareAuthSession';
 const AUTH_STATE_EVENT_NAME = 'curlcare:auth-state-change';
 const MAX_ASSISTANT_HISTORY = 24;
-import { readStoredProfile } from './profile-storage.js';
+const LANGCHAIN_CHAT_ENDPOINT = '/api/chat';
 const ASSISTANT_TYPING_DELAY_MS = {
   manualMin: 260,
   manualMax: 520,
@@ -169,6 +171,31 @@ export function isGreetingMessage(message) {
 
 function wait(ms) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function requestLangChainReply(message, page, history) {
+  try {
+    const response = await fetch(LANGCHAIN_CHAT_ENDPOINT, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message,
+        page,
+        history: normalizeConversationHistory(history)
+      })
+    });
+
+    if (!response.ok) {
+      return '';
+    }
+
+    const payload = await response.json();
+    return typeof payload.answer === 'string' ? payload.answer.trim() : '';
+  } catch {
+    return '';
+  }
 }
 
 function getAssistantTypingDelay(inputMode, message) {
@@ -1640,10 +1667,10 @@ export function initChatAssistant() {
       return;
     }
 
-  const resolvedMessage = resolveContextualMessage(message, conversationHistory, assistantContext);
-  const contextResolutionNote = buildContextResolutionNote(message, resolvedMessage);
+    const resolvedMessage = resolveContextualMessage(message, conversationHistory, assistantContext);
+    const contextResolutionNote = buildContextResolutionNote(message, resolvedMessage);
 
-  appendConversationMessage('user', message);
+    appendConversationMessage('user', message);
     input.value = '';
     input.disabled = true;
     submitButton.disabled = true;
@@ -1669,7 +1696,7 @@ export function initChatAssistant() {
         return;
       }
 
-        if (assistantPage === 'quiz') {
+      if (assistantPage === 'quiz') {
         const command = parseProfileCommand(resolvedMessage);
 
         if (command) {
@@ -1700,7 +1727,12 @@ export function initChatAssistant() {
       }
 
       updateAssistantContext(buildAssistantContextUpdate(null, assistantPage, resolvedMessage));
-      appendConversationMessage('assistant', joinReplyParts([contextResolutionNote, handleGenericRequest(resolvedMessage, assistantPage, knowledge)]));
+      const langChainReply = isGreetingMessage(resolvedMessage)
+        ? ''
+        : await requestLangChainReply(resolvedMessage, assistantPage, conversationHistory);
+      const fallbackReply = handleGenericRequest(resolvedMessage, assistantPage, knowledge);
+
+      appendConversationMessage('assistant', joinReplyParts([contextResolutionNote, langChainReply || fallbackReply]));
     } finally {
       if (typingBubble.isConnected) {
         typingBubble.remove();
