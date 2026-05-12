@@ -43,6 +43,14 @@ describe('chat assistant helpers', () => {
     expect(parseProfileCommand('add parabens')).toEqual({
       type: 'toggle-ingredient',
       value: 'parabens',
+      values: ['parabens'],
+      checked: true
+    });
+
+    expect(parseProfileCommand('i also want avoid sulfates, drying alcohols, and parabens')).toEqual({
+      type: 'toggle-ingredient',
+      value: 'sulfates',
+      values: ['sulfates', 'drying alcohols', 'parabens'],
       checked: true
     });
   });
@@ -184,6 +192,46 @@ describe('chat assistant helpers', () => {
     expect(inputs.density.value).toBe('medium');
     expect(reply).toContain('Updated your profile: Hair type: 4B | Porosity: Low | Density: Medium.');
     expect(reply).toContain('Next up: Main goal.');
+  });
+
+  it('applies multiple ingredient preferences at once', () => {
+    const checkboxes = {
+      sulfates: { checked: false, dispatchEvent() {} },
+      'drying alcohols': { checked: false, dispatchEvent() {} },
+      parabens: { checked: false, dispatchEvent() {} }
+    };
+
+    const form = {
+      querySelector(selector) {
+        const match = selector.match(/value="([^"]+)"/);
+        return match ? checkboxes[match[1]] || null : null;
+      },
+      querySelectorAll() {
+        return Object.entries(checkboxes)
+          .filter(([, checkbox]) => checkbox.checked)
+          .map(([value]) => ({ value }));
+      },
+      elements: {
+        namedItem() {
+          return null;
+        }
+      }
+    };
+
+    const reply = handleProfileAction(
+      {
+        type: 'toggle-ingredient',
+        value: 'sulfates',
+        values: ['sulfates', 'drying alcohols', 'parabens'],
+        checked: true
+      },
+      { knowledge: {}, form }
+    );
+
+    expect(checkboxes.sulfates.checked).toBe(true);
+    expect(checkboxes['drying alcohols'].checked).toBe(true);
+    expect(checkboxes.parabens.checked).toBe(true);
+    expect(reply).toContain('Added Sulfates, Drying Alcohols, Parabens to your avoid list.');
   });
 
   it('normalizes stored conversation history', () => {

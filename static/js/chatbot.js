@@ -489,7 +489,7 @@ function extractProfileFieldUpdates(text) {
   return updates;
 }
 
-function findIngredientValue(text) {
+function findIngredientValues(text) {
   const aliases = {
     sulfates: 'sulfates',
     sulfate: 'sulfates',
@@ -506,7 +506,7 @@ function findIngredientValue(text) {
     paraben: 'parabens'
   };
 
-  return findOptionValue(text, aliases);
+  return findOptionValues(text, aliases);
 }
 
 function shouldRemoveIngredient(text) {
@@ -720,7 +720,8 @@ function buildAssistantContextUpdate(command, page, resolvedMessage) {
   }
 
   if (command?.type === 'toggle-ingredient') {
-    return { lastIntent: 'toggle-ingredient', lastTopic: command.value };
+    const latestIngredient = command.values?.at(-1) || command.value || '';
+    return { lastIntent: 'toggle-ingredient', lastTopic: latestIngredient };
   }
 
   if (command?.type === 'submit-profile' || normalized.includes('show my matches')) {
@@ -817,12 +818,13 @@ export function parseProfileCommand(message) {
     return { type: 'set-field', field, value };
   }
 
-  const ingredient = findIngredientValue(text);
+  const ingredients = findIngredientValues(text);
 
-  if (ingredient && /(avoid|remove|add|use|include|uncheck|check|without|skip|paraben|sulfate|silicone|fragrance|alcohol|butter)/.test(text)) {
+  if (ingredients.length && /(avoid|remove|add|use|include|uncheck|check|without|skip|paraben|sulfate|silicone|fragrance|alcohol|butter)/.test(text)) {
     return {
       type: 'toggle-ingredient',
-      value: ingredient,
+      value: ingredients[0],
+      values: ingredients,
       checked: !shouldRemoveIngredient(text)
     };
   }
@@ -1485,23 +1487,42 @@ export function handleProfileAction(command, elements) {
   }
 
   if (command.type === 'toggle-ingredient') {
-    const checkbox = form.querySelector(`input[name="avoidIngredients"][value="${command.value}"]`);
+    const ingredientValues = command.values?.length ? command.values : [command.value].filter(Boolean);
+    const applied = [];
+    const missing = [];
 
-    if (!checkbox) {
-      return `I could not find ${command.value} in the ingredient list.`;
+    ingredientValues.forEach((ingredientValue) => {
+      const checkbox = form.querySelector(`input[name="avoidIngredients"][value="${ingredientValue}"]`);
+
+      if (!checkbox) {
+        missing.push(ingredientValue);
+        return;
+      }
+
+      checkbox.checked = command.checked;
+      triggerFormEvents(checkbox);
+      applied.push(ingredientValue);
+    });
+
+    if (!applied.length) {
+      return `I could not find ${ingredientValues.join(', ')} in the ingredient list.`;
     }
 
-    checkbox.checked = command.checked;
-    triggerFormEvents(checkbox);
-    return command.checked
-      ? joinReplyParts([
-        `Added ${toTitleCase(command.value)} to your avoid list.`,
-        'That preference will be saved with the rest of your profile.'
-      ])
-      : joinReplyParts([
-        `Removed ${toTitleCase(command.value)} from your avoid list.`,
-        'That ingredient will no longer be treated as a profile restriction.'
-      ]);
+    const replyParts = command.checked
+      ? [
+        `Added ${applied.map((item) => toTitleCase(item)).join(', ')} to your avoid list.`,
+        'Those preferences will be saved with the rest of your profile.'
+      ]
+      : [
+        `Removed ${applied.map((item) => toTitleCase(item)).join(', ')} from your avoid list.`,
+        'Those ingredients will no longer be treated as profile restrictions.'
+      ];
+
+    if (missing.length) {
+      replyParts.push(`I could not find ${missing.map((item) => toTitleCase(item)).join(', ')} in the ingredient list.`);
+    }
+
+    return joinReplyParts(replyParts);
   }
 
   return 'I can help fill profile fields, explain terms, and tell you what is missing.';
