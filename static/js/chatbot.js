@@ -1667,6 +1667,13 @@ export function initChatAssistant() {
       return;
     }
 
+    if (page !== 'chat') {
+      uiState = { ...uiState, pendingPrompt: message };
+      writeAssistantUiState(uiState);
+      window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
+      return;
+    }
+
     const resolvedMessage = resolveContextualMessage(message, conversationHistory, assistantContext);
     const contextResolutionNote = buildContextResolutionNote(message, resolvedMessage);
 
