@@ -1,18 +1,49 @@
 # CurlCare Match
 
-CurlCare Match is an inclusive hair product recommendation web app for users across hair types 1A to 4C. It combines a hair profile quiz, a product library, and an explainable scoring model to suggest products by hair fit, budget fit, and ingredient compatibility.
+CurlCare Match is an inclusive hair product recommendation web app for people across hair types 1A through 4C. It helps a user build a hair profile, browse real products, avoid unwanted ingredients, and receive explainable recommendations based on fit, budget, and hair goals.
 
-## Features
+This repository is intended to be clean, understandable, and submission-ready for an IS219 final project review.
 
-- Responsive multi-page frontend built with HTML, CSS, JavaScript, and Bootstrap 5.
-- Hair profile quiz with session storage.
-- Results page with ranked product fit scores out of 100.
-- Product library with multi-select filters and budget controls.
-- Combined guide page for hair types, porosity, and density.
-- Homepage includes the About section and hair type visual overview.
-- Grounding-ready _corpus folder for the future chatbot interface.
-- LangChain-backed chat route for grounded freeform assistant answers.
-- Automated tests with Vitest.
+Live site: https://curlcarematch.vercel.app/
+
+## What This Project Is
+
+CurlCare Match combines a multi-page frontend with recommendation logic, user profile persistence, and a grounded assistant experience. A user can:
+
+- learn about hair type, porosity, and density
+- build a profile through the quiz or chat assistant
+- save profile preferences and ingredient avoids
+- view matched products with explanations and scores
+- browse a full product library
+- sign in with local email/password or Google when configured
+
+## Why This Project Exists
+
+Haircare advice is often inconsistent, hard to personalize, or not inclusive of the full 1A to 4C range. This project was built to demonstrate a more structured and beginner-friendly approach: guide the user through core hair profile choices, connect those choices to product data, and explain why a product is being recommended instead of returning a black-box result.
+
+## What This Project Demonstrates
+
+This project was designed to demonstrate these skills and technologies:
+
+- frontend development with HTML, CSS, JavaScript, and Bootstrap
+- responsive UI and multi-page navigation
+- form handling and profile collection
+- recommendation and scoring logic using JSON-based product data
+- automated testing with Vitest
+- authentication flows with local account storage and optional Firebase Google sign-in
+- grounded AI assistant behavior using LangChain on a server-side chat route
+- deployment setup for Vercel
+
+## Main Features
+
+- Multi-page frontend for homepage, quiz, results, guides, and product library
+- Profile-based product matching with a visible score out of 100
+- Product filters for goals, budgets, product types, and compatibility
+- Ingredient avoid handling, including multiple avoided ingredients
+- Sitewide assistant with minimized, expanded, and fullscreen states
+- User-scoped persistence for profile and assistant state
+- Grounding-ready `_corpus` folder for assistant knowledge support
+- Automated test coverage for scoring, recommendations, quiz logic, auth helpers, and chatbot helpers
 
 ## Tech Stack
 
@@ -20,61 +51,110 @@ CurlCare Match is an inclusive hair product recommendation web app for users acr
 - CSS3
 - JavaScript ES modules
 - Bootstrap 5
-- JSON data files
+- Node.js
+- Express
 - LangChain JS
 - OpenAI via LangChain
-- Express
 - Vitest
+- JSON data files
+- Vercel serverless function support
 
-## Setup
+## Project Structure
 
-1. Install dependencies with npm install.
-2. Start the local server with npm run dev.
-3. Open http://127.0.0.1:4173.
+- `index.html`, `quiz.html`, `results.html`, `products.html`, `hair-type-guide.html`, `porosity-density-guide.html`: main user-facing pages
+- `static/css`: site styling
+- `static/js`: frontend behavior, quiz logic, auth, storage, recommendations, and assistant logic
+- `data`: product and guide datasets
+- `api`: serverless chat endpoint for deployment
+- `lib`: LangChain chat implementation
+- `tests`: automated tests
+- `docs`: planning and QA notes
+- `_corpus`: grounding content used to reduce drift and hallucinated assistant responses
 
-## LangChain Chat Setup
+## Prerequisites
 
-1. Add OPENAI_API_KEY to your local .env file.
-2. Run npm run dev so the Express server can serve both the site and the /api/chat LangChain route.
-3. The existing frontend assistant will use the LangChain route for grounded freeform replies and fall back to local rule-based responses if the route is unavailable.
+Before running the project locally, make sure you have:
 
-For a live deployment that uses LangChain, deploy this repo to Vercel or another Node-capable host. GitHub Pages alone cannot run the server-side LangChain route.
+- Node.js 18 or newer
+- npm
+
+Optional setup for advanced features:
+
+- an `OPENAI_API_KEY` in a local `.env` file if you want the server-side LangChain chat route to respond
+- Firebase web app configuration if you want Google sign-in enabled
+
+## How To Run The Project
+
+If you want to review the deployed version instead of running locally, use https://curlcarematch.vercel.app/.
+
+### Full local app
+
+Use this mode for the complete experience, including the Express server and chat API route.
+
+1. Install dependencies with `npm install`.
+2. Create a `.env` file and add `OPENAI_API_KEY=your_key_here` if you want LangChain responses enabled.
+3. Start the app with `npm run dev`.
+4. Open `http://127.0.0.1:4173` in the browser.
+
+### Static-only frontend preview
+
+Use this mode if you only want to preview the frontend pages without the Node server.
+
+1. Install dependencies with `npm install`.
+2. Start the static server with `npm run dev:static`.
+3. Open `http://127.0.0.1:4173` in the browser.
+
+In static-only mode, the site UI still loads, but the server-side LangChain chat route is not available.
+
+## How To Run The Tests
+
+Run all automated tests with:
+
+- `npm test`
+
+Current automated test files include:
+
+- `tests/recommendation.test.js`
+- `tests/scoring.test.js`
+- `tests/filtering.test.js`
+- `tests/quiz.test.js`
+- `tests/auth.test.js`
+- `tests/chatbot.test.js`
+
+## LangChain And Grounded Assistant Notes
+
+The assistant uses two layers:
+
+- client-side logic for profile editing, ingredient updates, and page-aware guidance
+- a server-side LangChain route for grounded freeform responses
+
+The `_corpus` folder exists to support more grounded assistant behavior and reduce hallucinations, drift, and memory loss. If the `/api/chat` route is unavailable, the frontend falls back to local rule-based behavior for supported actions.
+
+## Authentication Notes
+
+The project supports:
+
+- local email/password account flows stored in the browser
+- Google sign-in through Firebase when Firebase configuration is provided
+
+If Firebase is not configured, the rest of the app still works and the local auth flow remains available.
 
 ## Vercel Deployment
 
-1. Import the GitHub repo into Vercel.
-2. Keep the framework preset as Other.
-3. Do not set a build command.
-4. Set the output directory blank so Vercel serves the static site root and the serverless api route together.
-5. Add OPENAI_API_KEY in the Vercel project environment variables.
-6. Redeploy after the variable is saved.
+This repo is set up so the static frontend and the serverless chat route can be deployed together on Vercel.
 
-Vercel will serve the static pages from the repository root and the LangChain endpoint from [api/chat.js](api/chat.js).
+1. Import the GitHub repository into Vercel.
+2. Use the `Other` framework preset.
+3. Leave the build command empty.
+4. Leave the output directory empty.
+5. Add `OPENAI_API_KEY` as an environment variable.
+6. Deploy.
 
-## Firebase Google Sign-In Setup
+The static site is served from the repository root, and the assistant API route is served from `api/chat.js`.
 
-1. Create a Firebase project and add a Web app.
-2. In Firebase Authentication, enable the Google provider.
-3. Put your Firebase web config into [static/js/firebase-auth-config.js](static/js/firebase-auth-config.js) for deployment, or keep a machine-local override in static/js/firebase-auth-config.local.js during development.
-4. In the Firebase console, add localhost, 127.0.0.1, and your deployment origin to Authorized domains.
-5. Restart the local server and use the header avatar menu to test Google sign-in.
+## Scoring Overview
 
-Firebase web config values are public client-side identifiers, so [static/js/firebase-auth-config.js](static/js/firebase-auth-config.js) can be committed for deployment. The local override file stays gitignored if you want a separate machine-only config.
-
-## Run Tests
-
-- npm test
-
-## Folder Structure
-
-- index.html, quiz.html, results.html, hair-type-guide.html, porosity-density-guide.html, products.html, about.html (redirect)
-- static/css and static/js for styling and behavior
-- data for products and guide content
-- tests for recommendation, filtering, scoring, and quiz coverage
-- docs for specs, sprint plan, and QA
-- _corpus for future retrieval-grounded chatbot knowledge
-
-## Scoring Algorithm
+The recommendation score is based on weighted hair profile compatibility:
 
 - Hair type match: 20
 - Porosity match: 20
@@ -83,25 +163,16 @@ Firebase web config values are public client-side identifiers, so [static/js/fir
 - Budget match: 15
 - Ingredient fit: 10
 
-## Screenshots
-
-Add screenshots after UI QA and browser checks are complete.
-
 ## Disclaimer
 
 CurlCare Match provides general educational product guidance and is not medical advice. For psoriasis, severe irritation, hair loss, or ongoing scalp conditions, users should consult a licensed dermatologist.
 
-## Future Improvements
+## Reviewer Summary
 
-- Grounded chatbot interface backed by _corpus, products.json, and hair_guides.json
-- Vector retrieval layer after core QA passes
-- Product comparison view
-- Real product API integration
+For a reviewer, the key things to know are:
 
-## Current Notes
-
-- The About experience is merged into the homepage and the legacy about route redirects to that section.
-
-## Author
-
-IS219 final project build
+- this is a full project repository, not just a design mockup
+- the repo includes source code, automated tests, and local run instructions
+- the deployed version is available at https://curlcarematch.vercel.app/
+- the project demonstrates frontend engineering, recommendation logic, testing, deployment setup, and a grounded LangChain integration
+- the app is meant to show both practical web development skills and a polished, portfolio-ready product experience
