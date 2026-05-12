@@ -1,5 +1,6 @@
 const AUTH_USERS_STORAGE_KEY = 'curlcareAuthUsers';
 const AUTH_SESSION_STORAGE_KEY = 'curlcareAuthSession';
+const AUTH_STATE_EVENT_NAME = 'curlcare:auth-state-change';
 const FIREBASE_CONFIG_MODULE_PATHS = [
   './firebase-auth-config.local.js',
   './firebase-auth-config.js'
@@ -91,15 +92,19 @@ function readSessionUser() {
 function writeSessionUser(user) {
   if (!user) {
     localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    document.dispatchEvent(new CustomEvent(AUTH_STATE_EVENT_NAME, { detail: { user: null } }));
     return;
   }
 
-  localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify({
+  const normalizedUser = {
     name: normalizeName(user.name),
     email: normalizeEmail(user.email),
     provider: user.provider === 'google' ? 'google' : 'email',
     source: user.source === 'firebase' ? 'firebase' : 'local'
-  }));
+  };
+
+  localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(normalizedUser));
+  document.dispatchEvent(new CustomEvent(AUTH_STATE_EVENT_NAME, { detail: { user: normalizedUser } }));
 }
 
 export function registerLocalUser(users, payload) {

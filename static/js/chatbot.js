@@ -1,5 +1,7 @@
 const STORAGE_KEY = 'curlcareProfile';
 const ASSISTANT_UI_STORAGE_KEY = 'curlcareAssistantUi';
+const AUTH_SESSION_STORAGE_KEY = 'curlcareAuthSession';
+const AUTH_STATE_EVENT_NAME = 'curlcare:auth-state-change';
 const MAX_ASSISTANT_HISTORY = 24;
 const ASSISTANT_TYPING_DELAY_MS = {
   manualMin: 260,
@@ -211,12 +213,45 @@ function pushConversationEntry(history, role, text) {
   return normalizeConversationHistory([...history, { role, text }]);
 }
 
-function readAssistantUiState() {
+function readAuthSessionUser() {
   try {
-    const stored = sessionStorage.getItem(ASSISTANT_UI_STORAGE_KEY);
+    const stored = localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
 
     if (!stored) {
-      return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '' };
+      return null;
+    }
+
+    const parsed = JSON.parse(stored);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function buildAssistantStateKey(user) {
+  const normalizedEmail = String(user?.email || '').trim().toLowerCase();
+
+  if (!normalizedEmail) {
+    return `${ASSISTANT_UI_STORAGE_KEY}:guest`;
+  }
+
+  return `${ASSISTANT_UI_STORAGE_KEY}:user:${encodeURIComponent(normalizedEmail)}`;
+}
+
+function getAssistantStateStorage() {
+  return readAuthSessionUser()?.email ? localStorage : sessionStorage;
+}
+
+function createDefaultAssistantUiState() {
+  return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '' };
+}
+
+function readAssistantUiState() {
+  try {
+    const stored = getAssistantStateStorage().getItem(buildAssistantStateKey(readAuthSessionUser()));
+
+    if (!stored) {
+      return createDefaultAssistantUiState();
     }
 
     const parsed = JSON.parse(stored);
@@ -229,13 +264,13 @@ function readAssistantUiState() {
       pendingPrompt: typeof parsed.pendingPrompt === 'string' ? parsed.pendingPrompt : ''
     };
   } catch {
-    return { open: false, expanded: false, history: [], context: normalizeAssistantContext(), pendingPrompt: '' };
+    return createDefaultAssistantUiState();
   }
 }
 
 function writeAssistantUiState(state) {
   try {
-    sessionStorage.setItem(ASSISTANT_UI_STORAGE_KEY, JSON.stringify(state));
+    getAssistantStateStorage().setItem(buildAssistantStateKey(readAuthSessionUser()), JSON.stringify(state));
   } catch {
     // Ignore storage failures and keep the assistant usable.
   }
@@ -1448,6 +1483,7 @@ export function initChatAssistant() {
   const submitButton = shell.querySelector('.assistant-submit');
   const knowledgePromise = loadKnowledge();
   let uiState = readAssistantUiState();
+  let activeAssistantStateKey = buildAssistantStateKey(readAuthSessionUser());
   let conversationHistory = uiState.history || [];
   let assistantContext = normalizeAssistantContext(uiState.context);
   let pendingInputMode = 'manual';
@@ -1472,17 +1508,61 @@ export function initChatAssistant() {
     syncConversationHistory();
   };
 
+  const renderConversationHistory = () => {
+    messages.innerHTML = '';
+
+    if (conversationHistory.length) {
+      conversationHistory.forEach((entry) => appendMessage(messages, entry.role, entry.text));
+      return;
+    }
+
+    appendMessage(messages, 'assistant', getWelcomeMessage(assistantPage));
+  };
+
+  const syncAssistantStateForCurrentUser = () => {
+    const nextStateKey = buildAssistantStateKey(readAuthSessionUser());
+
+    if (nextStateKey === activeAssistantStateKey) {
+      return;
+    }
+
+    activeAssistantStateKey = nextStateKey;
+    uiState = readAssistantUiState();
+    conversationHistory = uiState.history || [];
+    assistantContext = normalizeAssistantContext(uiState.context);
+
+    if (page === 'chat') {
+      uiState = { ...uiState, open: true, expanded: true, pendingPrompt: '' };
+    } else {
+      uiState = { ...uiState, open: false, expanded: false, pendingPrompt: '' };
+    }
+
+    writeAssistantUiState(uiState);
+    panel.classList.toggle('d-none', !uiState.open);
+    shell.classList.toggle('assistant-shell-expanded', uiState.expanded);
+    panel.classList.toggle('assistant-panel-expanded', uiState.expanded);
+    launcher.setAttribute('aria-expanded', String(uiState.open));
+    expandButton.setAttribute('aria-pressed', String(uiState.expanded));
+    expandButton.setAttribute('aria-label', uiState.expanded ? 'Shrink conversation' : 'Expand conversation');
+    expandButton.setAttribute('title', uiState.expanded ? 'Shrink conversation' : 'Expand conversation');
+    expandButton.querySelector('.assistant-expand-label').textContent = uiState.expanded ? 'Shrink conversation' : 'Expand conversation';
+    fullscreenToggle.setAttribute('aria-pressed', String(uiState.expanded));
+    fullscreenToggle.setAttribute('aria-label', uiState.expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
+    fullscreenToggle.setAttribute('title', uiState.expanded ? 'Shrink conversation view' : 'Open conversation in fullscreen');
+    renderConversationHistory();
+    input.value = '';
+  };
+
   if (page === 'chat') {
     shell.classList.add('assistant-shell-page');
   }
 
-  if (conversationHistory.length) {
-    conversationHistory.forEach((entry) => appendMessage(messages, entry.role, entry.text));
-  } else {
+  if (!conversationHistory.length) {
     conversationHistory = pushConversationEntry(conversationHistory, 'assistant', getWelcomeMessage(assistantPage));
-    appendMessage(messages, 'assistant', conversationHistory[conversationHistory.length - 1].text);
     syncConversationHistory();
   }
+
+  renderConversationHistory();
 
   renderQuickActions(quickActions, getQuickActionCards(assistantPage), (prompt) => {
     if (page !== 'chat') {
@@ -1530,6 +1610,10 @@ export function initChatAssistant() {
     }
 
     window.location.href = `chat.html?context=${encodeURIComponent(assistantPage)}`;
+  });
+
+  document.addEventListener(AUTH_STATE_EVENT_NAME, () => {
+    syncAssistantStateForCurrentUser();
   });
 
   input.addEventListener('keydown', (event) => {

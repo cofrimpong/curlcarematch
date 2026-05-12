@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildProductGuidanceReply, getMissingProfileFields, handleGenericRequest, handleProfileAction, isGreetingMessage, normalizeAssistantContext, normalizeConversationHistory, parseGuideCommand, parseNavigationCommand, parseProductFilterCommand, parseProfileCommand, resolveContextualMessage } from '../static/js/chatbot.js';
+import { buildAssistantStateKey, buildProductGuidanceReply, getMissingProfileFields, handleGenericRequest, handleProfileAction, isGreetingMessage, normalizeAssistantContext, normalizeConversationHistory, parseGuideCommand, parseNavigationCommand, parseProductFilterCommand, parseProfileCommand, resolveContextualMessage } from '../static/js/chatbot.js';
 
 describe('chat assistant helpers', () => {
   it('reports missing profile fields in human labels', () => {
@@ -177,5 +177,10 @@ describe('chat assistant helpers', () => {
       lastGoals: ['moisture'],
       lastBudget: 'up to $25'
     });
+  });
+
+  it('scopes assistant storage keys by signed-in user', () => {
+    expect(buildAssistantStateKey(null)).toBe('curlcareAssistantUi:guest');
+    expect(buildAssistantStateKey({ email: 'Taylor@example.com' })).toBe('curlcareAssistantUi:user:taylor%40example.com');
   });
 });
